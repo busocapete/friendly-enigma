@@ -42,9 +42,6 @@ export const JobSearchPage = ({}) => {
     (state) => state.jobSearchResults.firstFetchComplete
   );
 
-  const updateStatus = useSelector(
-    (state) => state.jobSearchResults.updateStatus
-  );
 
   const error = useSelector((state) => state.feed.error);
   const totalCount = useSelector((state) => state.jobSearchResults.totalCount);
@@ -171,32 +168,7 @@ export const JobSearchPage = ({}) => {
                     isMobile
                   />
 
-                  {updateStatus === "succeeded" ? (
-                    <>
-                      {orderedJobIds.map((jobId) => {
-                        return <JobSearchResult key={jobId} jobId={jobId} />;
-                      })}
-                    </>
-                  ) : (
-                    <div className="mt-3">
-                      <Spinner text="Updating feed..." />
-                    </div>
-                  )}
-                </div>
-                <div className="d-none d-md-block col-md-3">
-                  <Facets
-                    facets={facets}
-                    selectedCheckboxes={selectedCheckboxes}
-                    handleSelectedCheckboxes={setSelectedCheckboxes}
-                    handleUpdateIndustries={updateIndustries}
-                    handleUpdateSectors={updateSectors}
-                    handleUpdateLocations={updateLocations}
-                    handleUpdateFirmTypes={updateFirmTypes}
-                    handleClearFilters={clearFilters}
-                  />
-                </div>
-              </div>
-            </>
+                 
           ) : searchStatus === "loading" ? (
             <Spinner text="Searching jobs..." />
           ) : (
