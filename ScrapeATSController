@@ -1,0 +1,129 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
+using System.Threading.Tasks;
+using AutoMapper;
+using BuSoCa.Data.Entities;
+using BuSoCa.Data.Interfaces;
+using BuSoCa.Data.ServiceBus;
+using BuSoCa.Model.AzureDtos;
+using BuSoCa.Model.CreateDtos;
+using BuSoCa.Model.Dtos;
+using BuSoCa.Model.Enums;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+
+namespace Admin.Sourcers.Api.Controllers
+{
+    [Route("api")]
+    [ApiController]
+    public class ScrapeAtsController : ControllerBase
+    {
+        private readonly IBusinessRepository _businessRepository;
+        private readonly IGreenhouseJobRepository _greenhouseJobRepository;
+        private readonly IJobUploadProcessor _jobUploadProcessor;
+        private readonly IJobUnpublishProcessor _jobUnpublishProcessor;
+        private readonly IJobSearchRepository _jobSearchRepository;
+        private readonly IRepository<JobScrapeInfo> _jobScrapeInfoRepository;
+        private readonly IMapper _mapper;
+
+        public BusinessExternalAtsController(
+            IBusinessRepository businessRepository,
+            IGreenhouseJobRepository greenhouseJobRepository,
+            IJobUploadProcessor jobUploadProcessor,
+            IJobUnpublishProcessor jobUnpublishProcessor,
+            IJobSearchRepository jobSearchRepository,
+            IRepository<JobScrapeInfo> jobScrapeInfoRepository,
+            IMapper mapper)
+        {
+            _businessRepository = businessRepository ?? 
+                throw new ArgumentNullException(nameof(businessRepository));
+
+            _greenhouseJobRepository = greenhouseJobRepository ?? 
+                throw new ArgumentNullException(nameof(greenhouseJobRepository));
+ 
+            _jobUnpublishProcessor = jobUnpublishProcessor ?? throw new ArgumentNullException(nameof(jobUnpublishProcessor));
+            _jobSearchRepository = jobSearchRepository ?? throw new ArgumentNullException(nameof(jobSearchRepository));
+            _jobScrapeInfoRepository = jobScrapeInfoRepository;
+
+            _mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+        }
+
+        [HttpPost("businesses/{businessId}/scrape")]
+        public async Task<IActionResult> ScrapeJobsWithServiceBus(Guid businessId)
+        {
+            if (businessId == Guid.Empty)
+            {
+                return NotFound();
+            }
+
+            var business = await _businessRepository
+                .GetBusinessWithFullProfile(businessId);
+
+            if (business == null)
+            {
+                return NotFound();
+            }
+
+            var businessForJobUploadProcessor = _mapper
+                .Map<BusinessForJobUploadProcessorDto>(business);
+
+            var businessTags = business.Profile.Tags.Where(
+                    t => t.Tag.Type == TagType.FirmType
+                    || t.Tag.Type == TagType.Sector
+                    || t.Tag.Type == TagType.Industry);
+
+            var mappedTagsForAzure = _mapper.Map<IEnumerable<AzureTag>>
+                (businessTags.Select(t => t.Tag));
+
+            var ownerId = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value;
+
+            var jobsResponse = await _greenhouseJobRepository
+                .GetJobsForBusiness(businessId);
+
+            var jobsToUpload = _mapper.Map<IEnumerable<GreenhouseJob>>
+                (jobsResponse.Jobs);
+
+            var numberOfJobsOnSourcers = _greenhouseJobRepository
+                .GetBusinessGreenhouseJobIds(businessId).Count();
+
+            HashSet<long> idsForUnpublishFromDb = _greenhouseJobRepository
+                .GetIdsForUnpublish(jobsToUpload, businessId);
+
+            HashSet<string> idsForUnpublishFromAzure = await _greenhouseJobRepository
+                .GetIdsOfAzureJobsForUnpublish(jobsToUpload, businessId);
+
+            var jobScrapeInfo = new JobScrapeInfo()
+            {
+                JobCountStart = numberOfJobsOnSourcers,
+                JobCountEnd = jobsToUpload.Count(),
+                Created = DateTimeOffset.Now,
+                BusinessId = businessId,
+                UnpublishedCount = idsForUnpublishFromDb.Count()
+            };
+
+            await _jobScrapeInfoRepository.Add(jobScrapeInfo);
+
+            _ = _jobUploadProcessor.JobsListReceived(
+                jobsToUpload,
+                businessForJobUploadProcessor,
+                businessTags,
+                mappedTagsForAzure,
+                ownerId);
+
+            _ = _jobUnpublishProcessor.UnpublishListReceived(
+                idsForUnpublishFromDb,
+                idsForUnpublishFromAzure);
+    
+
+            var response = new ResponseMessageDto()
+            {
+                Message = "Jobs sent for processing"
+            };
+
+            return StatusCode(202, response);
+        }        
+    }
+}
