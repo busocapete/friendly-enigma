@@ -9,7 +9,8 @@ namespace Admin.Sourcers.Api.InjectServices
 	public static partial class AuthenticationInitializer
 	{
 		public static IServiceCollection RegisterAuthentication(
-			this IServiceCollection services, WebApplicationBuilder builder)
+			this IServiceCollection services, 
+			WebApplicationBuilder builder)
 		{
 		    var azureCredential = new DefaultAzureCredential();
 	
