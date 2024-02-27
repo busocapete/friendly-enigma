@@ -35,5 +35,5 @@ namespace Admin.Sourcers.Api.InjectServices
 		    return services;
 		}
 	}
-  }
 }
+
