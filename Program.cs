@@ -40,38 +40,37 @@ builder.Services.AddHttpContextAccessor();
 
 //injectServices > RepositoryInitializer
 builder.Services.RegisterSourcersRepositories();
+//Admin repos
 builder.Services.RegisterBuSoCaRepositories();
 
+//Initialize SendGrid Services
 builder.Services.RegisterSendGridServices();
 
+//Initialize Service Buses
 builder.Services.RegisterServiceBuses();
 
-
+//Initialize Job Upload/Unpulbish Services
 builder.Services.RegisterWorkerServices();
 
+//Enpoint Auth Policies
 builder.Services.RegisterAuthorizationPolicies();
 builder.Services.RegisterAuthorization();
+
 
 builder.Services.RegisterConfigOptions(builder);
 
 builder.Services.RegisterCors();
 
-
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
 builder.Services.RegisterAuthentication(builder);
-
-
-
-// AutoMapper not including BuSoCa.Mapping Profiles
-// without using it or calling Assemblies.Load("BuSoCa.MappingProfile")
-var loadBuSoCaMappingProfiles = new LoadBuSoCaMappingProfile();
 
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
 
 var app = builder.Build();
 
+//Ensure Db up to date. 
 MigrateDatabase.MigrateDatabaseAtStartup(app);
 
 // Configure the HTTP request pipeline.
