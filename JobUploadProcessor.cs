@@ -14,32 +14,32 @@ using BuSoCa.Data.Helpers;
 
 namespace BuSoCa.Data.ServiceBus
 {
-	public class JobUploadProcessor : IJobUploadProcessor
-	{
-		    private static ServiceBusClient _client;
-        private readonly IOptions<AzureServiceBusConfig> _options;
-        public static string errorMessage;
-
-        public JobUploadProcessor(IOptions<AzureServiceBusConfig> options)
-      		{
-            _options = options ?? 
-                throw new ArgumentNullException(nameof(options));
-            try
-      			{
-      				  _client = new ServiceBusClient(
-      					_options.Value.ConnectionString);
-      			}
-      			catch (Exception ex)
-      			{
-      				errorMessage = ex.Message.ToString();
-      				Console.WriteLine
-      					($"Error initializing jobUploadProcessor. " +
-      					$"Error:- {errorMessage}");
-      			}
-        }
+    public class JobUploadProcessor : IJobUploadProcessor
+	{  
+	    private static ServiceBusClient _client;
+	    private readonly IOptions<AzureServiceBusConfig> _options;
+	    public static string errorMessage;
+	
+	    public JobUploadProcessor(IOptions<AzureServiceBusConfig> options)
+		{
+		    _options = options ?? 
+			throw new ArgumentNullException(nameof(options));
+			try
+			{
+				  _client = new ServiceBusClient(
+					_options.Value.ConnectionString);
+			}
+			catch (Exception ex)
+			{
+				errorMessage = ex.Message.ToString();
+				Console.WriteLine
+					($"Error initializing jobUploadProcessor. " +
+					$"Error:- {errorMessage}");
+			}
+		}
 
         public async Task JobsListReceived(IEnumerable<GreenhouseJob> jobs,
-			      BusinessForJobUploadProcessorDto business,
+	    BusinessForJobUploadProcessorDto business,
             IEnumerable<ProfileTag> businessTags,
             IEnumerable<AzureTag> businessTagsForAzure,
             string ownerId)
