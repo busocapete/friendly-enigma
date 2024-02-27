@@ -11,8 +11,6 @@ namespace BuSoCa.MappingProfiles.Profiles
     {
         public BlobProfile()
         {
-            //CreateMap<BlobDto, Blob>().ReverseMap();
-
             CreateMap<Blob, AzureBlob>();
 
             CreateMap<Blob, BlobDto>()
